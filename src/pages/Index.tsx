@@ -1,7 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 
+const STEAM_LOGIN_URL = "https://functions.poehali.dev/b861bf86-5e62-4ea6-abc1-89691eeb13ec";
+
 type Section = "home" | "cases" | "upgrades" | "profile" | "stats" | "support";
+
+interface User {
+  username: string;
+  avatar: string;
+  balance: number;
+  cases: number;
+  ref_code: string;
+  ref_earnings: number;
+  token: string;
+}
 
 const NAV = [
   { id: "home", label: "Главная", icon: "LayoutDashboard" },
@@ -12,25 +24,18 @@ const NAV = [
   { id: "support", label: "Поддержка", icon: "LifeBuoy" },
 ] as const;
 
-const REFERRALS = [
-  { name: "Aleksei_pro", joined: "2 дн. назад", activity: 94, earned: "+₽ 1 240" },
-  { name: "dark_trader", joined: "5 дн. назад", activity: 71, earned: "+₽ 870" },
-  { name: "moonshot99", joined: "12 дн. назад", activity: 43, earned: "+₽ 340" },
-  { name: "viper_x", joined: "18 дн. назад", activity: 28, earned: "+₽ 190" },
+const UPGRADES_DATA = [
+  { name: "Щит удачи", desc: "Защита от потери при неудаче", cost: 200, active: false },
+  { name: "Двойная комиссия", desc: "×2 бонус с рефералов на 24ч", cost: 500, active: false },
+  { name: "VIP-статус", desc: "Приоритетный дроп в кейсах", cost: 1500, active: false },
+  { name: "Авто-реинвест", desc: "Реинвестиция бонусов автоматически", cost: 800, active: false },
 ];
 
-const CASES = [
+const CASES_DATA = [
   { name: "Нуар", price: "₽ 199", rarity: "Редкий", color: "#C8FF00", chance: "12%" },
   { name: "Криптон", price: "₽ 499", rarity: "Эпик", color: "#9B59B6", chance: "5%" },
   { name: "Абсолют", price: "₽ 999", rarity: "Легенда", color: "#E74C3C", chance: "1%" },
   { name: "Блэкаут", price: "₽ 299", rarity: "Необычный", color: "#3498DB", chance: "8%" },
-];
-
-const UPGRADES = [
-  { name: "Щит удачи", desc: "Защита от потери при неудаче", cost: 200, active: true },
-  { name: "Двойная комиссия", desc: "×2 бонус с рефералов на 24ч", cost: 500, active: false },
-  { name: "VIP-статус", desc: "Приоритетный дроп в кейсах", cost: 1500, active: false },
-  { name: "Авто-реинвест", desc: "Реинвестиция бонусов автоматически", cost: 800, active: true },
 ];
 
 function StatCard({ label, value, sub, accent = false }: { label: string; value: string; sub?: string; accent?: boolean }) {
@@ -43,13 +48,52 @@ function StatCard({ label, value, sub, accent = false }: { label: string; value:
   );
 }
 
-function SectionHome({ setSection }: { setSection: (s: Section) => void }) {
+function LoginScreen() {
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-golos">
+      <div className="relative w-full max-w-sm mx-4">
+        <div className="absolute -inset-px rounded-2xl bg-gradient-to-b from-[#C8FF00]/10 to-transparent pointer-events-none" />
+        <div className="relative rounded-2xl border border-[#1e1e1e] bg-[#0d0d0d] p-10 flex flex-col items-center gap-8 animate-fade-in">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-[#C8FF00] flex items-center justify-center">
+              <span className="text-black font-bold text-xl">D</span>
+            </div>
+            <div className="text-center">
+              <div className="font-bold text-white text-xl tracking-tight">DROP Platform</div>
+              <div className="text-[#555] text-sm mt-1">Войди, чтобы начать</div>
+            </div>
+          </div>
+
+          <div className="w-full space-y-3">
+            <a
+              href={STEAM_LOGIN_URL}
+              className="flex items-center justify-center gap-3 w-full py-3 px-5 rounded-xl font-semibold text-sm transition-all hover:opacity-90 active:scale-95"
+              style={{ background: "#1b2838", border: "1px solid #2a475e", color: "#c7d5e0" }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.187.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.029 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.606 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.455 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.662 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.252 0-2.265-1.014-2.265-2.265z"/>
+              </svg>
+              Войти через Steam
+            </a>
+          </div>
+
+          <p className="text-xs text-[#333] text-center leading-relaxed">
+            Входя, ты соглашаешься с условиями использования.<br />
+            Мы не храним пароли от Steam.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionHome({ user, setSection }: { user: User; setSection: (s: Section) => void }) {
   return (
     <div className="animate-fade-in space-y-8">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Добро пожаловать 👾</h1>
-          <p className="text-[#555] mt-1">Твой баланс и активность за сегодня</p>
+          <h1 className="text-3xl font-bold text-white">Привет, {user.username} 👾</h1>
+          <p className="text-[#555] mt-1">Твой баланс и активность</p>
         </div>
         <div className="text-right">
           <div className="text-xs text-[#555] uppercase tracking-wider mb-1">Онлайн</div>
@@ -61,10 +105,10 @@ function SectionHome({ setSection }: { setSection: (s: Section) => void }) {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Баланс" value="₽ 14 820" sub="+₽ 340 сегодня" accent />
-        <StatCard label="Рефералы" value="4" sub="активных" />
-        <StatCard label="Комиссия всего" value="₽ 2 640" sub="от рефералов" />
-        <StatCard label="Открыто кейсов" value="38" sub="за всё время" />
+        <StatCard label="Баланс" value={`₽ ${user.balance.toLocaleString("ru")}`} sub="пополни, чтобы начать" accent />
+        <StatCard label="Рефералы" value="0" sub="пригласи друзей" />
+        <StatCard label="Комиссия всего" value="₽ 0" sub="от рефералов" />
+        <StatCard label="Открыто кейсов" value={String(user.cases)} sub="за всё время" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -73,43 +117,22 @@ function SectionHome({ setSection }: { setSection: (s: Section) => void }) {
             <span className="text-sm font-semibold text-white">Рефералы</span>
             <button onClick={() => setSection("profile")} className="text-xs text-[#C8FF00] hover:underline">Пригласить →</button>
           </div>
-          <div className="space-y-3">
-            {REFERRALS.slice(0, 3).map((r) => (
-              <div key={r.name} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center text-xs font-mono text-[#555]">
-                  {r.name[0].toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-white truncate">{r.name}</div>
-                  <div className="w-full h-1 bg-[#1a1a1a] rounded-full mt-1">
-                    <div className="h-1 bg-[#C8FF00] rounded-full transition-all" style={{ width: `${r.activity}%` }}></div>
-                  </div>
-                </div>
-                <span className="text-xs font-mono text-[#C8FF00] shrink-0">{r.earned}</span>
-              </div>
-            ))}
+          <div className="py-8 text-center">
+            <div className="text-3xl mb-3">👥</div>
+            <div className="text-sm text-[#555]">Пока никого нет</div>
+            <div className="text-xs text-[#444] mt-1">Поделись ссылкой — и получай 5% от активности друзей</div>
           </div>
         </div>
 
         <div className="rounded-xl border border-[#1e1e1e] bg-[#111] p-5">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-semibold text-white">Последние кейсы</span>
-            <button onClick={() => setSection("cases")} className="text-xs text-[#C8FF00] hover:underline">Все →</button>
+            <span className="text-sm font-semibold text-white">Последние дропы</span>
+            <button onClick={() => setSection("cases")} className="text-xs text-[#C8FF00] hover:underline">Открыть →</button>
           </div>
-          <div className="space-y-2">
-            {[
-              { item: "Нож «Тень»", case: "Нуар", time: "10 мин назад", val: "₽ 3 400" },
-              { item: "Перчатки «Абис»", case: "Криптон", time: "1ч назад", val: "₽ 890" },
-              { item: "Пистолет «Мрак»", case: "Абсолют", time: "3ч назад", val: "₽ 210" },
-            ].map((d, i) => (
-              <div key={i} className="flex items-center justify-between py-2 border-b border-[#181818] last:border-0">
-                <div>
-                  <div className="text-sm text-white">{d.item}</div>
-                  <div className="text-xs text-[#555]">{d.case} · {d.time}</div>
-                </div>
-                <span className="text-sm font-mono text-[#C8FF00]">{d.val}</span>
-              </div>
-            ))}
+          <div className="py-8 text-center">
+            <div className="text-3xl mb-3">📦</div>
+            <div className="text-sm text-[#555]">Ещё нет открытых кейсов</div>
+            <div className="text-xs text-[#444] mt-1">Открой первый кейс и посмотри что выпадет</div>
           </div>
         </div>
       </div>
@@ -117,7 +140,7 @@ function SectionHome({ setSection }: { setSection: (s: Section) => void }) {
   );
 }
 
-function SectionCases() {
+function SectionCases({ user }: { user: User }) {
   const [opening, setOpening] = useState<string | null>(null);
 
   const handleOpen = (name: string) => {
@@ -127,12 +150,18 @@ function SectionCases() {
 
   return (
     <div className="animate-fade-in space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-white">Кейсы</h2>
-        <p className="text-[#555] mt-1">Открывай и получай предметы</p>
+      <div className="flex items-end justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Кейсы</h2>
+          <p className="text-[#555] mt-1">Открывай и получай предметы</p>
+        </div>
+        <div className="text-right">
+          <div className="text-xs text-[#555]">Баланс</div>
+          <div className="font-mono font-bold text-white">₽ {user.balance.toLocaleString("ru")}</div>
+        </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {CASES.map((c) => (
+        {CASES_DATA.map((c) => (
           <div key={c.name} className="rounded-xl border border-[#1e1e1e] bg-[#111] p-5 flex flex-col gap-4 card-hover">
             <div className="w-full aspect-square rounded-lg flex items-center justify-center relative overflow-hidden"
               style={{ background: `radial-gradient(circle at 60% 40%, ${c.color}18 0%, transparent 70%), #0d0d0d` }}>
@@ -169,7 +198,7 @@ function SectionCases() {
 }
 
 function SectionUpgrades() {
-  const [items, setItems] = useState(UPGRADES);
+  const [items, setItems] = useState(UPGRADES_DATA);
 
   const toggle = (i: number) => {
     setItems(prev => prev.map((u, idx) => idx === i ? { ...u, active: !u.active } : u));
@@ -205,9 +234,9 @@ function SectionUpgrades() {
   );
 }
 
-function SectionProfile() {
+function SectionProfile({ user }: { user: User }) {
   const [copied, setCopied] = useState(false);
-  const link = "https://drop.ru/ref/dark_user_42";
+  const link = `${window.location.origin}?ref=${user.ref_code}`;
 
   const copy = () => {
     navigator.clipboard.writeText(link);
@@ -224,18 +253,20 @@ function SectionProfile() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-1 rounded-xl border border-[#1e1e1e] bg-[#111] p-6 flex flex-col items-center gap-4">
-          <div className="w-20 h-20 rounded-2xl bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center text-4xl">
-            👤
-          </div>
+          {user.avatar ? (
+            <img src={user.avatar} alt={user.username} className="w-20 h-20 rounded-2xl border border-[#2a2a2a]" />
+          ) : (
+            <div className="w-20 h-20 rounded-2xl bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center text-4xl">👤</div>
+          )}
           <div className="text-center">
-            <div className="font-bold text-white text-lg">dark_user_42</div>
-            <div className="text-xs text-[#555] mt-0.5">с 15 января 2025</div>
+            <div className="font-bold text-white text-lg">{user.username}</div>
+            <div className="text-xs text-[#555] mt-0.5">Steam аккаунт</div>
           </div>
           <div className="w-full pt-3 border-t border-[#1e1e1e] space-y-2">
             {[
-              { l: "Уровень", v: "27" },
-              { l: "Статус", v: "Золотой" },
-              { l: "Рейтинг", v: "#142" },
+              { l: "Уровень", v: "1" },
+              { l: "Статус", v: "Новичок" },
+              { l: "Кейсов открыто", v: String(user.cases) },
             ].map(r => (
               <div key={r.l} className="flex justify-between text-sm">
                 <span className="text-[#555]">{r.l}</span>
@@ -253,9 +284,9 @@ function SectionProfile() {
             </div>
             <div className="grid grid-cols-3 gap-3 mb-5">
               {[
-                { l: "Рефералов", v: "4" },
+                { l: "Рефералов", v: "0" },
                 { l: "Комиссия", v: "5%" },
-                { l: "Заработано", v: "₽ 2 640" },
+                { l: "Заработано", v: `₽ ${user.ref_earnings.toLocaleString("ru")}` },
               ].map(s => (
                 <div key={s.l} className="text-center p-3 rounded-lg bg-[#0d0d0d] border border-[#1e1e1e]">
                   <div className="text-xl font-bold font-mono neon-text">{s.v}</div>
@@ -281,24 +312,10 @@ function SectionProfile() {
 
           <div className="rounded-xl border border-[#1e1e1e] bg-[#111] p-5">
             <div className="text-sm font-semibold text-white mb-3">Активные рефералы</div>
-            <div className="space-y-3">
-              {REFERRALS.map((r) => (
-                <div key={r.name} className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center text-xs font-mono text-[#555]">
-                    {r.name[0].toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-white">{r.name}</span>
-                      <span className="text-xs text-[#555]">{r.joined}</span>
-                    </div>
-                    <div className="w-full h-1 bg-[#1a1a1a] rounded-full">
-                      <div className="h-1 bg-[#C8FF00] rounded-full" style={{ width: `${r.activity}%` }}></div>
-                    </div>
-                  </div>
-                  <span className="text-xs font-mono neon-text shrink-0">{r.earned}</span>
-                </div>
-              ))}
+            <div className="py-6 text-center">
+              <div className="text-2xl mb-2">👥</div>
+              <div className="text-sm text-[#555]">Ещё никого нет</div>
+              <div className="text-xs text-[#444] mt-1">Поделись ссылкой выше с друзьями</div>
             </div>
           </div>
         </div>
@@ -307,11 +324,7 @@ function SectionProfile() {
   );
 }
 
-function SectionStats() {
-  const months = ["Янв", "Фев", "Мар", "Апр", "Май", "Июн"];
-  const values = [4200, 6800, 5100, 9400, 7300, 12800];
-  const max = Math.max(...values);
-
+function SectionStats({ user }: { user: User }) {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
@@ -320,63 +333,32 @@ function SectionStats() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Доход за месяц" value="₽ 12 800" sub="+36% к прошлому" accent />
-        <StatCard label="Всего дропов" value="38" sub="за 6 месяцев" />
-        <StatCard label="Ср. чек кейса" value="₽ 389" />
-        <StatCard label="ROI рефералов" value="×4.2" sub="окупаемость" />
+        <StatCard label="Доход за месяц" value="₽ 0" sub="начни открывать кейсы" accent />
+        <StatCard label="Всего дропов" value={String(user.cases)} sub="за всё время" />
+        <StatCard label="Ср. чек кейса" value="—" />
+        <StatCard label="ROI рефералов" value="—" sub="нет данных" />
       </div>
 
       <div className="rounded-xl border border-[#1e1e1e] bg-[#111] p-5">
         <div className="text-sm font-semibold text-white mb-5">Доход по месяцам</div>
-        <div className="flex items-end gap-3 h-36">
-          {values.map((v, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-2">
-              <span className="text-xs font-mono text-[#555]">₽{Math.round(v / 1000)}к</span>
-              <div className="w-full rounded-t-md transition-all duration-500 relative overflow-hidden"
-                style={{ height: `${(v / max) * 100}%`, background: i === values.length - 1 ? "#C8FF00" : "#1e1e1e" }}>
-                {i === values.length - 1 && (
-                  <div className="absolute inset-0 shimmer"></div>
-                )}
-              </div>
-              <span className="text-xs text-[#555]">{months[i]}</span>
-            </div>
-          ))}
+        <div className="py-12 text-center">
+          <div className="text-3xl mb-3">📊</div>
+          <div className="text-sm text-[#555]">Нет данных для отображения</div>
+          <div className="text-xs text-[#444] mt-1">График появится после первых открытий</div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="rounded-xl border border-[#1e1e1e] bg-[#111] p-5">
-          <div className="text-sm font-semibold text-white mb-4">Топ предметов</div>
-          <div className="space-y-3">
-            {[
-              { name: "Нож «Тень»", val: "₽ 3 400", pct: 26 },
-              { name: "Перчатки «Абис»", val: "₽ 890", pct: 16 },
-              { name: "AK-47 «Призрак»", val: "₽ 650", pct: 12 },
-            ].map((t, i) => (
-              <div key={i} className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-[#888]">{t.name}</span>
-                  <span className="font-mono text-white">{t.val}</span>
-                </div>
-                <div className="w-full h-1 bg-[#1a1a1a] rounded-full">
-                  <div className="h-1 bg-[#C8FF00] rounded-full" style={{ width: `${t.pct}%` }}></div>
-                </div>
-              </div>
-            ))}
+          <div className="text-sm font-semibold text-white mb-4">Лучшие дропы</div>
+          <div className="py-6 text-center">
+            <div className="text-sm text-[#555]">Пока пусто</div>
           </div>
         </div>
         <div className="rounded-xl border border-[#1e1e1e] bg-[#111] p-5">
           <div className="text-sm font-semibold text-white mb-4">Активность рефералов</div>
-          <div className="space-y-3">
-            {REFERRALS.map((r) => (
-              <div key={r.name} className="flex items-center gap-3">
-                <span className="text-xs text-[#555] w-20 truncate">{r.name}</span>
-                <div className="flex-1 h-2 bg-[#1a1a1a] rounded-full">
-                  <div className="h-2 rounded-full" style={{ width: `${r.activity}%`, background: `rgba(200,255,0,${r.activity / 100})` }}></div>
-                </div>
-                <span className="text-xs font-mono text-[#555] w-6">{r.activity}%</span>
-              </div>
-            ))}
+          <div className="py-6 text-center">
+            <div className="text-sm text-[#555]">Нет рефералов</div>
           </div>
         </div>
       </div>
@@ -433,21 +415,8 @@ function SectionSupport() {
 
           <div className="rounded-xl border border-[#1e1e1e] bg-[#111] p-5">
             <div className="text-sm font-semibold text-white mb-3">Мои обращения</div>
-            <div className="space-y-2">
-              {[
-                { id: "#1042", topic: "Не зачислился бонус реферала", status: "Решено", date: "12 апр" },
-                { id: "#0998", topic: "Вопрос по апгрейду VIP", status: "В работе", date: "10 апр" },
-              ].map(t => (
-                <div key={t.id} className="flex items-center justify-between py-2 border-b border-[#181818] last:border-0">
-                  <div>
-                    <div className="text-sm text-white">{t.topic}</div>
-                    <div className="text-xs text-[#555]">{t.id} · {t.date}</div>
-                  </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${t.status === "Решено" ? "bg-[#C8FF00]/10 text-[#C8FF00]" : "bg-[#1a3a2a] text-[#4caf7d]"}`}>
-                    {t.status}
-                  </span>
-                </div>
-              ))}
+            <div className="py-6 text-center">
+              <div className="text-sm text-[#555]">Обращений пока нет</div>
             </div>
           </div>
         </div>
@@ -482,17 +451,56 @@ function SectionSupport() {
   );
 }
 
+function parseUserFromUrl(): User | null {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
+  if (!token) return null;
+  const user: User = {
+    token,
+    username: params.get("username") || "Игрок",
+    avatar: params.get("avatar") || "",
+    balance: parseFloat(params.get("balance") || "0"),
+    cases: parseInt(params.get("cases") || "0", 10),
+    ref_code: params.get("ref_code") || "",
+    ref_earnings: parseFloat(params.get("ref_earnings") || "0"),
+  };
+  localStorage.setItem("drop_user", JSON.stringify(user));
+  window.history.replaceState({}, "", window.location.pathname);
+  return user;
+}
+
+function loadUserFromStorage(): User | null {
+  const raw = localStorage.getItem("drop_user");
+  if (!raw) return null;
+  try { return JSON.parse(raw) as User; } catch { return null; }
+}
+
 export default function Index() {
+  const [user, setUser] = useState<User | null>(null);
   const [section, setSection] = useState<Section>("home");
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  useEffect(() => {
+    const fromUrl = parseUserFromUrl();
+    if (fromUrl) { setUser(fromUrl); return; }
+    const fromStorage = loadUserFromStorage();
+    if (fromStorage) setUser(fromStorage);
+  }, []);
+
+  const logout = () => {
+    localStorage.removeItem("drop_user");
+    setUser(null);
+  };
+
+  if (!user) return <LoginScreen />;
+
   const renderSection = () => {
     switch (section) {
-      case "home": return <SectionHome setSection={setSection} />;
-      case "cases": return <SectionCases />;
+      case "home": return <SectionHome user={user} setSection={setSection} />;
+      case "cases": return <SectionCases user={user} />;
       case "upgrades": return <SectionUpgrades />;
-      case "profile": return <SectionProfile />;
-      case "stats": return <SectionStats />;
+      case "profile": return <SectionProfile user={user} />;
+      case "stats": return <SectionStats user={user} />;
       case "support": return <SectionSupport />;
     }
   };
@@ -504,7 +512,6 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex font-golos">
-      {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-40 w-56 bg-[#0d0d0d] border-r border-[#181818] flex flex-col transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
         <div className="px-5 py-6 border-b border-[#181818]">
           <div className="flex items-center gap-2.5">
@@ -533,23 +540,26 @@ export default function Index() {
 
         <div className="px-4 py-4 border-t border-[#181818]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center text-sm">
-              👤
+            {user.avatar ? (
+              <img src={user.avatar} alt={user.username} className="w-8 h-8 rounded-full border border-[#2a2a2a]" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center text-sm">👤</div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-medium text-white truncate">{user.username}</div>
+              <div className="text-[10px] text-[#444]">₽ {user.balance.toLocaleString("ru")}</div>
             </div>
-            <div className="min-w-0">
-              <div className="text-xs font-medium text-white truncate">dark_user_42</div>
-              <div className="text-[10px] text-[#444]">₽ 14 820</div>
-            </div>
+            <button onClick={logout} className="text-[#444] hover:text-[#C8FF00] transition-colors shrink-0" title="Выйти">
+              <Icon name="LogOut" size={14} />
+            </button>
           </div>
         </div>
       </aside>
 
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-30 bg-black/60 lg:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* Main */}
       <main className="flex-1 lg:ml-56 min-h-screen">
         <header className="sticky top-0 z-20 bg-[#0a0a0a]/90 backdrop-blur border-b border-[#141414] px-6 py-4 flex items-center justify-between">
           <button className="lg:hidden text-[#555] hover:text-white" onClick={() => setMobileOpen(true)}>
@@ -561,7 +571,7 @@ export default function Index() {
           <div className="flex items-center gap-3 ml-auto">
             <div className="flex items-center gap-1.5 text-xs text-[#555] border border-[#1e1e1e] rounded-lg px-3 py-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#C8FF00] pulse-dot"></span>
-              <span className="font-mono">₽ 14 820</span>
+              <span className="font-mono">₽ {user.balance.toLocaleString("ru")}</span>
             </div>
             <button className="w-8 h-8 rounded-lg bg-[#111] border border-[#1e1e1e] flex items-center justify-center text-[#555] hover:text-white transition-colors">
               <Icon name="Bell" size={15} />
