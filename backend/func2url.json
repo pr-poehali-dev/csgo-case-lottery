@@ -1,4 +1,6 @@
 {
+  "robokassa-webhook": "https://functions.poehali.dev/8180a0a2-a7fa-437e-9f99-7eace5c60d7e",
+  "robokassa": "https://functions.poehali.dev/a5676e04-463e-4daa-a494-c659a2b04576",
   "steam-callback": "https://functions.poehali.dev/7a05b6fd-044c-4622-97db-1462e8948e8a",
   "steam-login": "https://functions.poehali.dev/b861bf86-5e62-4ea6-abc1-89691eeb13ec"
 }
